@@ -23,7 +23,7 @@ set(DAMLEV_SOURCES
 )
 
 
-add_library(damlev MODULE ${DAMLEV_SOURCES} tests/unittests.cpp)
+add_library(damlev SHARED ${DAMLEV_SOURCES} tests/unittests.cpp)
 target_compile_definitions(damlev PRIVATE WORDS_PATH="/usr/share/dict/words")
 target_compile_definitions(damlev PRIVATE MYSQL_DYNAMIC_PLUGIN)
 # Uncomment the following to set the buffer size to something other than 512
@@ -96,7 +96,9 @@ if(Boost_FOUND)
 	include_directories(${Boost_INCLUDE_DIRS})
 endif()
 
-add_executable(benchmark common.h tests/testharness.hpp damlev.cpp ${TEST_ALGORITHM}.cpp tests/benchmark.cpp)
+# Add the benchmark executable
+add_executable(benchmark common.h tests/testharness.hpp tests/benchmark.cpp)
+target_link_libraries(benchmark PRIVATE damlev)
 target_compile_definitions(benchmark PRIVATE WORD_COUNT=235000ul)
-target_compile_definitions(benchmark PRIVATE BENCH_FUNCTION=${TEST_ALGORITHM})
+target_compile_definitions(benchmark PRIVATE BENCH_FUNCTION="${TEST_ALGORITHM}")
 target_compile_definitions(benchmark PRIVATE WORDS_PATH="/usr/share/dict/words")
