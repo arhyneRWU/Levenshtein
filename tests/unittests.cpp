@@ -285,8 +285,8 @@ TEST_F(LevenshteinTest, EarlyBailFunction) {
             {"Lysmata jundalini123456", 6},           // 6 changes (e.g., extensive modifications)
             {"Lysmata jundalini12345", 5},           // 5 changes (e.g., multiple substitutions, insertions, deletions)
             {"Lysmata jundalini12", 2},             // 2 substitutions
-            {"Lysmata jundalini1234", 2},           // 4 changes (e.g., substitutions and deletions)
-            {"Lysmata jundalini123", 2},           // 3 insertions
+            {"Lysmata jundalini1234", 2},           // 4 changes (e.g., substitutions and deletions) should return 2
+            {"Lysmata jundalini123", 2},           // 3 insertions should return 2
             {"Lysmata jundalini1", 1}           // 1 substitution
     };
 
@@ -324,6 +324,7 @@ TEST_F(LevenshteinTest, EarlyBailFunction) {
         std::cout << "Score between \"" << subject << "\" and \"" << query << "\": " << score << std::endl;
         EXPECT_EQ(score,expected_distance)<< "Early bail function test failed. Expected "
                                           << expected_distance << ", but got " << score << ".";
+
 
     }
 
