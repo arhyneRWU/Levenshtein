@@ -1,3 +1,9 @@
+# Set the minimum required version of CMake
+cmake_minimum_required(VERSION 3.10)
+
+# Define the project
+project(BlazingFastLevenshtein)
+
 # Enable testing
 enable_testing()
 
@@ -28,7 +34,7 @@ set(AVAILABLE_ALGORITHMS "damlev;damlevconstmin;damlevconst;damlevlim;damlevp;no
 set(ALGORITHM_ARGS "2;3;3;3;3;1")
 
 # Define algorithm variables with default values
-set(ALGORITHM "damlevconst")
+set(ALGORITHM "damlevconstmin")
 set(WORDS_PATH "/usr/share/dict/words" CACHE STRING "Path to the word list file.")
 set(DAMLEV_BUFFER_SIZE 4096ull CACHE STRING "Buffer size for the algorithm.")
 

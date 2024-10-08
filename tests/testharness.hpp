@@ -11,7 +11,7 @@
 // multiple times.
 
 #include <iostream>
-#include <common.h> //gives IDE error but runs fine.
+#include "../src/common/common.h" //gives IDE error but runs fine.
 #include <mysql/mysql/udf_registration_types.h>  // This wasn't needed but it removed errors in IDE, ran with or without.
 
 // Default definitions in case CMake does not define them

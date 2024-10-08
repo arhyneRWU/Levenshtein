@@ -9,6 +9,7 @@
 #include <boost/interprocess/mapped_region.hpp>
 #include <boost/interprocess/file_mapping.hpp>
 #include <sstream>
+#include <unordered_map>
 
 #ifndef WORD_COUNT
 #define WORD_COUNT 10000ul
@@ -23,6 +24,10 @@
 std::random_device rd;
 std::mt19937 gen(rd());
 
+// Random Number Generator
+std::random_device rd_global;
+std::mt19937 gen_global(rd_global());
+
 struct TestCase {
     std::string a;
     std::string b;
@@ -32,6 +37,23 @@ struct TestCase {
 
 int LOOP = 100000; // Adjust as necessary for testing speed
 std::vector<TestCase> failedTests; // Vector to store failed test cases
+
+// Structure to hold query and its expected edit distance
+struct Query {
+    std::string word;
+    int editDistance; // Expected edit distance from the subject
+};
+
+// Updated list of queries with one query per edit distance from 1 to 6
+std::vector<Query> orderedQueries = {
+        {"Lysmata judalini", 1},            // 1 substitution
+        {"Lysmata juadalin", 2},             // 2 substitutions
+        {"Lysmata jundalinii", 3},           // 3 insertions
+        {"Lysmata jundalinix", 4},           // 4 changes (e.g., substitutions and deletions)
+        {"Lysmata jundalinxx", 5},           // 5 changes (e.g., multiple substitutions, insertions, deletions)
+        {"Lysmata jundalinxxy", 6}           // 6 changes (e.g., extensive modifications)
+};
+
 
 std::vector<std::string> readWordsFromMappedFile(const boost::interprocess::mapped_region& region, unsigned maximumWords) {
     const char* begin = static_cast<const char*>(region.get_address());
@@ -51,7 +73,7 @@ std::vector<std::string> readWordsFromMappedFile(const boost::interprocess::mapp
 
 // Helper function to check if a value is within a given range.
 ::testing::AssertionResult IsBetweenInclusive(int val, int lower_bound, int upper_bound) {
-    if ((val >= lower_bound) && (val <= upper_bound))
+    if ((val == lower_bound) || (val == upper_bound))
         return ::testing::AssertionSuccess();
     else
         return ::testing::AssertionFailure() << val << " is outside the range " << lower_bound << " to " << upper_bound;
@@ -251,7 +273,65 @@ TEST_F(LevenshteinTest, Substitution) {
     RunLevenshteinTest("Substitution", applySubstitution, wordList,3);
 }
 
+
+// Refined Test for Early Bail Function
+TEST_F(LevenshteinTest, EarlyBailFunction) {
+    int max_distance = 10;
+    // Subject word
+    std::string subject = "Lysmata jundalini";
+
+    // Updated query list with one query per edit distance from 1 to 6
+    std::vector<Query> orderedQueries = {
+            {"Lysmata jundalini123456", 6},           // 6 changes (e.g., extensive modifications)
+            {"Lysmata jundalini12345", 5},           // 5 changes (e.g., multiple substitutions, insertions, deletions)
+            {"Lysmata jundalini12", 2},             // 2 substitutions
+            {"Lysmata jundalini1234", 2},           // 4 changes (e.g., substitutions and deletions)
+            {"Lysmata jundalini123", 2},           // 3 insertions
+            {"Lysmata jundalini1", 1}           // 1 substitution
+    };
+
+    // Create a map for quick lookup of expected edit distances
+    std::unordered_map<std::string, int> queryDistanceMap;
+    for (const auto& q : orderedQueries) {
+        queryDistanceMap[q.word] = q.editDistance;
+    }
+
+    // Extract the words into a separate list and determine the minimal edit distance
+    std::vector<std::string> queries;
+    int expected_lower_bound = INT32_MAX;
+    for (const auto& q : orderedQueries) {
+        queries.push_back(q.word);
+        if (q.editDistance < expected_lower_bound) {
+            expected_lower_bound = q.editDistance;
+        }
+    }
+
+    for (const auto& query : queries) {
+        // Retrieve the expected distance from the map
+        auto it = queryDistanceMap.find(query);
+        ASSERT_NE(it, queryDistanceMap.end()) << "Query \"" << query << "\" does not have an associated expected distance.";
+        int expected_distance = it->second;
+
+        int score = LEV_CALL(
+                const_cast<char*>(subject.c_str()),
+                subject.length(),
+                const_cast<char*>(query.c_str()),
+                query.length(),
+                max_distance
+        );
+
+        // Log the score for debugging purposes
+        std::cout << "Score between \"" << subject << "\" and \"" << query << "\": " << score << std::endl;
+        EXPECT_EQ(score,expected_distance)<< "Early bail function test failed. Expected "
+                                          << expected_distance << ", but got " << score << ".";
+
+    }
+
+}
+
+
 int main(int argc, char **argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
+
 }
