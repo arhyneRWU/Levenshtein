@@ -3,7 +3,9 @@
 # Define library sources
 set(DAMLEV_SOURCES
         algorithms/damlev.cpp
-        algorithms/damlevp.cpp
+        algorithms/damlevp.cpp  ##TODO rename to damlSim
+        #algorithms/damlevlim_p.cpp   ## TODO Need to add this with a limit, say look for words with 80% similar.. damlSimlimit
+        #algorithms/damlevlimmin_p.cpp   ## TODO Need to add this with a limit, say look for words with 80% similar.. damlSimlimitMin
         algorithms/damlevlim.cpp
         algorithms/damlevconst.cpp
         algorithms/damlevconstmin.cpp
