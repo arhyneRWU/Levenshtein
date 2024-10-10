@@ -27,18 +27,21 @@ target_compile_definitions(damlev PRIVATE
 )
 
 # MySQL Include Directory
-if(NOT DEFINED MYSQL_INCLUDE)
-execute_process(COMMAND mysql_config --include
-        OUTPUT_VARIABLE MYSQL_INCLUDE
-        OUTPUT_STRIP_TRAILING_WHITESPACE)
-# Fallback hail-Mary for Win64
-if(WIN64 AND NOT DEFINED MYSQL_INCLUDE)
-    set(MYSQL_INCLUDE "-I C:/Program Files/MySQL/MySQL Server 8.0/include")
+# Get the MySQL include flags
+if(NOT DEFINED MYSQL_INCLUDE_FLAG)
+    execute_process(COMMAND mysql_config --include
+            OUTPUT_VARIABLE MYSQL_INCLUDE_FLAG
+            OUTPUT_STRIP_TRAILING_WHITESPACE)
+    # Fallback for Win64
+    if(WIN64 AND NOT DEFINED MYSQL_INCLUDE_FLAG)
+        set(MYSQL_INCLUDE_FLAG "-I C:/Program Files/MySQL/MySQL Server 8.0/include")
+    endif()
 endif()
-endif()
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MYSQL_INCLUDE}")
+
+# Remove the '-I' prefix to get the include directory
+string(REGEX REPLACE "^-I(.*)" "\\1" MYSQL_INCLUDE ${MYSQL_INCLUDE_FLAG})
+
 message(STATUS "Include dir: ${MYSQL_INCLUDE}")
-message(STATUS "CXX_FLAGS: ${CMAKE_CXX_FLAGS}")
 
 # Include directories with PUBLIC scope to propagate to linked targets
 target_include_directories(damlev PUBLIC
@@ -46,7 +49,6 @@ target_include_directories(damlev PUBLIC
         ${PROJECT_SOURCE_DIR}/include
         ${MYSQL_INCLUDE}
 )
-
 ### Library Installation ###
 
 # Determine MYSQL_PLUGIN_DIR using mysql_config

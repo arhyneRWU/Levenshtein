@@ -10,7 +10,6 @@
 #include <boost/interprocess/file_mapping.hpp>
 #include <sstream>
 #include <unordered_map>
-
 #ifndef WORD_COUNT
 #define WORD_COUNT 10000ul
 #endif
