@@ -26,11 +26,25 @@ target_compile_definitions(damlev PRIVATE
         DAMLEV_BUFFER_SIZE=${BUFFER_SIZE}
 )
 
+# MySQL Include Directory
+if(NOT DEFINED MYSQL_INCLUDE)
+execute_process(COMMAND mysql_config --include
+        OUTPUT_VARIABLE MYSQL_INCLUDE
+        OUTPUT_STRIP_TRAILING_WHITESPACE)
+# Fallback hail-Mary for Win64
+if(WIN64 AND NOT DEFINED MYSQL_INCLUDE)
+    set(MYSQL_INCLUDE "-I C:/Program Files/MySQL/MySQL Server 8.0/include")
+endif()
+endif()
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MYSQL_INCLUDE}")
+message(STATUS "Include dir: ${MYSQL_INCLUDE}")
+message(STATUS "CXX_FLAGS: ${CMAKE_CXX_FLAGS}")
+
 # Include directories with PUBLIC scope to propagate to linked targets
 target_include_directories(damlev PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/common
         ${PROJECT_SOURCE_DIR}/include
-        /opt/homebrew/Cellar/mysql/8.3.0_1/include/mysql
+        ${MYSQL_INCLUDE}
 )
 
 ### Library Installation ###
