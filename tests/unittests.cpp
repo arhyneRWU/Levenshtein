@@ -35,23 +35,13 @@ struct TestCase {
     std::string functionName;
 };
 
-int LOOP = 100000; // Adjust as necessary for testing speed
+int LOOP = 100000; // Adjust as necessary, the more, the better
 std::vector<TestCase> failedTests; // Vector to store failed test cases
 
 // Structure to hold query and its expected edit distance
 struct Query {
     std::string word;
     int editDistance; // Expected edit distance from the subject
-};
-
-// Updated list of queries with one query per edit distance from 1 to 6
-std::vector<Query> orderedQueries = {
-        {"Lysmata judalini", 1},            // 1 substitution
-        {"Lysmata juadalin", 2},             // 2 substitutions
-        {"Lysmata jundalinii", 3},           // 3 insertions
-        {"Lysmata jundalinix", 4},           // 4 changes (e.g., substitutions and deletions)
-        {"Lysmata jundalinxx", 5},           // 5 changes (e.g., multiple substitutions, insertions, deletions)
-        {"Lysmata jundalinxxy", 6}           // 6 changes (e.g., extensive modifications)
 };
 
 
@@ -72,6 +62,8 @@ std::vector<std::string> readWordsFromMappedFile(const boost::interprocess::mapp
 }
 
 // Helper function to check if a value is within a given range.
+// This is for limit functions that pass max_distance.  In these cases results maybe two option
+// the shorter of two distances, expected distance or max_distance
 ::testing::AssertionResult IsBetweenInclusive(int val, int lower_bound, int upper_bound) {
     if ((val == lower_bound) || (val == upper_bound))
         return ::testing::AssertionSuccess();
@@ -79,6 +71,7 @@ std::vector<std::string> readWordsFromMappedFile(const boost::interprocess::mapp
         return ::testing::AssertionFailure() << val << " is outside the range " << lower_bound << " to " << upper_bound;
 }
 
+// full matrix classic DamLevDistance never fails used to compute expected distance.
 int calculateDamLevDistance(const std::string& S1, const std::string& S2) {
     int n = S1.size();
     int m = S2.size();
@@ -106,6 +99,8 @@ int calculateDamLevDistance(const std::string& S1, const std::string& S2) {
     return dp[n][m];
 }
 
+// Random functions
+
 int getRandomInt(int min, int max) {
     std::uniform_int_distribution<> dis(min, max);
     return dis(gen);
@@ -121,6 +116,9 @@ int getRandomEditCount(const std::string& str) {
     if (str.empty()) return 0;
     return getRandomInt(1, std::min(static_cast<int>(str.length()), 5));
 }
+
+
+// Change functions, we make specific changes to ensure no edge case failures are present.
 
 std::string applyTransposition(std::string str, int editCount) {
     for (int i = 0; i < editCount; ++i) {
@@ -205,7 +203,7 @@ protected:
 
 
 // Maximum number of allowed failures before breaking the loop
-const int MAX_FAILURES = 1;
+const int MAX_FAILURES = 1; // if one fails something is wrong, use testoneoff.cpp to investigate.
 
 template <typename Func>
 void RunLevenshteinTest(const char* function_name, Func applyEditFunc, const std::vector<std::string>& wordList, int max_distance) {
@@ -221,17 +219,22 @@ void RunLevenshteinTest(const char* function_name, Func applyEditFunc, const std
                 testCase.a.size(),
                 const_cast<char*>(testCase.b.c_str()),
                 testCase.b.size(),
-                max_distance // Assuming a max distance of 3
+                max_distance // Assuming a max distance of 3,
+
         );
 
         // Determine bounds based on the current algorithm being tested
         const char* algorithm_name = LEV_ALGORITHM_NAME;
         int lower_bound, upper_bound;
 
+        // these functions have max_distance in them.  The functions have set return as
+        // max_distance +1 or edit_distance which ever is shorter.
         if (strcmp(algorithm_name, "damlevconst") == 0 || strcmp(algorithm_name, "damlevconstmin") == 0) {
             lower_bound = std::min(testCase.expectedDistance, max_distance + 1);
             upper_bound = std::max(testCase.expectedDistance, max_distance + 1);
         } else {
+            // keep style the same, but set both to the same number,
+            // this is only done to keep the tests similar.
             lower_bound = testCase.expectedDistance;
             upper_bound = testCase.expectedDistance;
         }
@@ -250,10 +253,6 @@ void RunLevenshteinTest(const char* function_name, Func applyEditFunc, const std
     }
 }
 
-
-//Here we should get each function we want to test and loop through that AVAILABLE_ALGORITHMS
-//is it possible to do that with LEV_CALL?  We use LEV_CALL in one_off testing as well.
-// Specific test for Transposition
 TEST_F(LevenshteinTest, Transposition) {
     RunLevenshteinTest("Transposition", applyTransposition, wordList, 3);
 }
@@ -274,23 +273,26 @@ TEST_F(LevenshteinTest, Substitution) {
 }
 
 
-// Refined Test for Early Bail Function
+// Test for Early Bail Function
 TEST_F(LevenshteinTest, EarlyBailFunction) {
-    int max_distance = 10;
-    // Subject word
-    std::string subject = "Lysmata jundalini";
+    int max_distance = 10; // most be longer than the largest edit distance for this test.
 
-    // Updated query list with one query per edit distance from 1 to 6
+    // Search Term, input string to be tested against the list
+    std::string subject = "Lysmata jundalini";
+    //https://www.qualitymarine.com/news/junda-lins-peppermint-shrimp/
+
+    // Query list to simulate mysql table, known distances ordered to provide editDistance return
+    // ....min functions will record the lowest edit distance found and will return that distance.
     std::vector<Query> orderedQueries = {
-            {"Lysmata jundalini123456", 6},           // 6 changes (e.g., extensive modifications)
-            {"Lysmata jundalini12345", 5},           // 5 changes (e.g., multiple substitutions, insertions, deletions)
-            {"Lysmata jundalini12", 2},             // 2 substitutions
-            {"Lysmata jundalini1234", 2},           // 4 changes (e.g., substitutions and deletions) should return 2
-            {"Lysmata jundalini123", 2},           // 3 insertions should return 2
-            {"Lysmata jundalini1", 1}           // 1 substitution
+            {"Lysmata jundalini123456", 6},           // 6 changes should return 6
+            {"Lysmata jundalini12345", 5},           // 5 changes should return 5
+            {"Lysmata jundalini12", 2},             // 2 changes should return 2
+            {"Lysmata jundalini1234", 2},           // 4 changes should return 2
+            {"Lysmata jundalini123", 2},           // 3 changes should return 2
+            {"Lysmata jundalini1", 1}           // 1 change should return 1
     };
 
-    // Create a map for quick lookup of expected edit distances
+    // map for lookup of expected edit distances
     std::unordered_map<std::string, int> queryDistanceMap;
     for (const auto& q : orderedQueries) {
         queryDistanceMap[q.word] = q.editDistance;
